@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../theme.dart';
 import 'admin_user_detail_screen.dart';
+import 'admin_transaction_detail_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -450,19 +451,19 @@ class _AdminScreenState extends State<AdminScreen> {
                           children: [
                             _metricTile('people', 'TOTAL USERS',
                                 '${users.length}',
-                                const Color(0xFF2563eb)),
+                                const Color(0xFF2563eb), onTap: () => setState(() => _selectedIndex = 2)),
                             _metricTile('txn', 'TRANSACTIONS',
-                                '$txnCount', kMaroon),
+                                '$txnCount', kMaroon, onTap: () => setState(() => _selectedIndex = 1)),
                             _metricTile('order', 'TOTAL ORDERS',
-                                '${orders.length}', kGold),
+                                '${orders.length}', kGold, onTap: () => setState(() => _selectedIndex = 3)),
                             _metricTile('timer', 'PROCESSING',
                                 '$processing',
-                                const Color(0xFFd97706)),
+                                const Color(0xFFd97706), onTap: () => setState(() => _selectedIndex = 3)),
                             _metricTile('truck', 'SHIPPED', '$shipped',
-                                const Color(0xFF2563eb)),
+                                const Color(0xFF2563eb), onTap: () => setState(() => _selectedIndex = 3)),
                             _metricTile('done', 'DELIVERED',
                                 '$delivered',
-                                const Color(0xFF138a43)),
+                                const Color(0xFF138a43), onTap: () => setState(() => _selectedIndex = 3)),
                           ],
                         ),
                       ],
@@ -477,8 +478,11 @@ class _AdminScreenState extends State<AdminScreen> {
     },
   );
 
-  Widget _metricTile(String icon, String title, String value, Color color) =>
-      Container(
+  Widget _metricTile(String icon, String title, String value, Color color,
+          {VoidCallback? onTap}) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
         padding: const EdgeInsets.all(16),
         decoration: cardDecoration(radius: 16),
         child: Column(
@@ -515,7 +519,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
           ],
         ),
-      );
+      ));
 
   Widget _transactionsTab() => StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance
@@ -589,7 +593,11 @@ class _AdminScreenState extends State<AdminScreen> {
                       final grams = _asNumber(data['grams']);
                       final rate = _asNumber(data['rate']);
                       final phone = data['phone']?.toString() ?? '';
-                      return Container(
+                      return GestureDetector(
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) =>
+                            AdminTransactionDetailScreen(txn: data))),
+                        child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: cardDecoration(radius: 14),
                         child: Row(
@@ -651,7 +659,7 @@ class _AdminScreenState extends State<AdminScreen> {
                             ),
                           ],
                         ),
-                      );
+                      ));
                     },
                   ),
           ),
