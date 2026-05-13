@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../services/auth_service.dart';
 import '../theme.dart';
+import 'admin_user_detail_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -13,9 +14,9 @@ class AdminScreen extends StatefulWidget {
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tab;
+class _AdminScreenState extends State<AdminScreen> {
+  int _selectedIndex = 0;
+  bool _manageShowShop = false;
   final _goldCtrl = TextEditingController();
   final _silverCtrl = TextEditingController();
   final _gold10_24Ctrl = TextEditingController();
@@ -24,25 +25,15 @@ class _AdminScreenState extends State<AdminScreen>
   final _silver50Ctrl = TextEditingController();
 
   static const _rupee = '\u20B9';
-  final _tabs = const [
-    'Dashboard',
-    'Transactions',
-    'Users',
-    'Orders',
-    'Prices',
-    'Shop',
-  ];
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: _tabs.length, vsync: this);
     _loadPrices();
   }
 
   @override
   void dispose() {
-    _tab.dispose();
     _goldCtrl.dispose();
     _silverCtrl.dispose();
     _gold10_24Ctrl.dispose();
@@ -79,117 +70,208 @@ class _AdminScreenState extends State<AdminScreen>
     if (mounted) setState(() {});
   }
 
+  Widget _currentTab() {
+    switch (_selectedIndex) {
+      case 0: return _dashboardTab();
+      case 1: return _transactionsTab();
+      case 2: return _usersTab();
+      case 3: return _ordersTab();
+      case 4: return _manageTab();
+      default: return _dashboardTab();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBg,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            _adminHeader(),
-            _tabStrip(),
-            Expanded(
-              child: TabBarView(
-                controller: _tab,
-                children: [
-                  _dashboardTab(),
-                  _transactionsTab(),
-                  _usersTab(),
-                  _ordersTab(),
-                  _pricesTab(),
-                  _shopTab(),
-                ],
-              ),
-            ),
-          ],
-        ),
+      body: Column(
+        children: [
+          _adminHeader(),
+          Expanded(child: _currentTab()),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (i) => setState(() => _selectedIndex = i),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: kGold,
+        unselectedItemColor: kTextSecondary,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+        unselectedLabelStyle: const TextStyle(fontSize: 11),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.swap_horiz_outlined), activeIcon: Icon(Icons.swap_horiz), label: 'Transactions'),
+          BottomNavigationBarItem(icon: Icon(Icons.people_outline), activeIcon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.shopping_bag_outlined), activeIcon: Icon(Icons.shopping_bag), label: 'Orders'),
+          BottomNavigationBarItem(icon: Icon(Icons.tune_outlined), activeIcon: Icon(Icons.tune), label: 'Manage'),
+        ],
       ),
     );
   }
 
-  Widget _adminHeader() => Container(
-    height: 98,
-    padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
-    decoration: BoxDecoration(gradient: headerGradient),
-    child: Row(
-      children: [
-        Container(
-          height: 40,
-          width: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24),
-          ),
-          child: const Icon(Icons.star, color: kGoldLight, size: 22),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+  static const _tabTitles = ['Dashboard', 'Transactions', 'Users', 'Orders', 'Manage'];
+
+  Widget _adminHeader() {
+    final title = _tabTitles[_selectedIndex];
+    return Container(
+      decoration: BoxDecoration(gradient: headerGradient),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Row(
             children: [
-              Text(
-                'ADMIN',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  letterSpacing: 0,
-                  fontWeight: FontWeight.w500,
+              // Logo badge
+              Container(
+                height: 44,
+                width: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                ),
+                child: const Center(
+                  child: Text('🏅', style: TextStyle(fontSize: 22)),
                 ),
               ),
-              Text(
-                'DigiGold',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  height: 1.1,
-                  fontWeight: FontWeight.w900,
+              const SizedBox(width: 12),
+              // Title block
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'ADMIN',
+                            style: TextStyle(
+                              color: kGoldLight,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Logout button
+              GestureDetector(
+                onTap: () async {
+                  await AuthService.logout();
+                  if (!mounted) return;
+                  context.go('/login');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.logout_rounded, color: Colors.white, size: 15),
+                      SizedBox(width: 5),
+                      Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        OutlinedButton.icon(
-          onPressed: () async {
-            await AuthService.logout();
-            if (!mounted) return;
-            context.go('/login');
-          },
-          icon: const Icon(Icons.logout, size: 16),
-          label: const Text('Logout'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.22)),
-            backgroundColor: Colors.white.withValues(alpha: 0.12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            textStyle: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 
-  Widget _tabStrip() => Container(
-    height: 48,
-    color: Colors.white,
-    child: TabBar(
-      controller: _tab,
-      isScrollable: true,
-      labelColor: kGold,
-      unselectedLabelColor: kTextSecondary,
-      indicatorColor: kGold,
-      indicatorWeight: 1.5,
-      labelPadding: const EdgeInsets.symmetric(horizontal: 18),
-      tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-    ),
+  Widget _manageTab() => Column(
+    children: [
+      Container(
+        color: Colors.white,
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _manageShowShop = false),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: !_manageShowShop ? kGold : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    'Prices',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: !_manageShowShop ? kGold : kTextSecondary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _manageShowShop = true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: _manageShowShop ? kGold : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  child: Text(
+                    'Shop',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _manageShowShop ? kGold : kTextSecondary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      Expanded(child: _manageShowShop ? _shopTab() : _pricesTab()),
+    ],
   );
 
   Widget _dashboardTab() => StreamBuilder<DocumentSnapshot>(
@@ -616,8 +698,15 @@ class _AdminScreenState extends State<AdminScreen>
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               itemCount: docs.length,
               separatorBuilder: (_, _) => const SizedBox(height: 14),
-              itemBuilder: (_, i) =>
-                  _userCard(docs[i].data() as Map<String, dynamic>),
+              itemBuilder: (_, i) {
+                final data = docs[i].data() as Map<String, dynamic>;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => AdminUserDetailScreen(user: data),
+                  )),
+                  child: _userCard(data),
+                );
+              },
             ),
           ),
         ],

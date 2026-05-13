@@ -1,8 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme.dart';
@@ -450,7 +450,7 @@ class _AccountScreenState extends State<AccountScreen> {
     if (source == null) return;
 
     final picked = await _picker.pickImage(
-        source: source, imageQuality: 80, maxWidth: 1200);
+        source: source, imageQuality: 50, maxWidth: 800);
     if (picked == null) return;
 
     if (!mounted) return;
@@ -458,22 +458,16 @@ class _AccountScreenState extends State<AccountScreen> {
         const SnackBar(content: Text('Uploading...')));
 
     try {
-      final file = File(picked.path);
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('kyc/$_phone/$docType.jpg');
-      await ref.putFile(file);
-      final url = await ref.getDownloadURL();
-
+      final bytes = await File(picked.path).readAsBytes();
+      final base64Str = base64Encode(bytes);
       final field = docType == 'pan' ? 'panUrl' : 'aadhaarUrl';
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_phone)
           .update({
-        field: url,
+        field: base64Str,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
@@ -540,7 +534,8 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  void _viewImage(String url, String label) {
+  void _viewImage(String base64Str, String label) {
+    final bytes = base64Decode(base64Str);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -563,11 +558,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 ],
               ),
             ),
-            Image.network(url, fit: BoxFit.contain,
-                loadingBuilder: (_, child, progress) => progress == null
-                    ? child
-                    : const Center(
-                        child: CircularProgressIndicator(color: kGold))),
+            Image.memory(bytes, fit: BoxFit.contain),
             const SizedBox(height: 12),
           ],
         ),
