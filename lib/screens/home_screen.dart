@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 import '../theme.dart';
 import '../services/auth_service.dart';
 import '../services/price_service.dart';
@@ -92,10 +94,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                     _bannerSection(),
                     const SizedBox(height: 16),
+                    _savingsPlanBanner(),
+                    const SizedBox(height: 16),
                     _savingsSlabs(goldGrams),
                     const SizedBox(height: 16),
-                    _trustBadges(),
-                    const SizedBox(height: 24),
+                     _trustBadges(),
+                     const SizedBox(height: 16),
+                     _infoSections(),
+                     const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -266,6 +272,93 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       );
 
+  Widget _savingsPlanBanner() {
+    final goldPrice = _goldPrice;
+    final amounts = [10, 50, 100, 500];
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [kGold.withValues(alpha: 0.12), kGoldPale],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: kGoldBorder.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('💰', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Gold Savings Plan',
+                        style: TextStyle(
+                            color: kTextPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15)),
+                    Text('Start from ₹10 · Daily / Weekly / Monthly',
+                        style: TextStyle(color: kTextMuted, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: amounts.map((amt) {
+              final grams = goldPrice > 0 ? amt / goldPrice : 0.0;
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kGoldBorder.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    children: [
+                      Text('₹$amt',
+                          style: const TextStyle(
+                              color: kGold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
+                      Text('≈${grams.toStringAsFixed(4)}g',
+                          style: const TextStyle(
+                              color: kTextMuted, fontSize: 10)),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => context.go('/plan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kGold,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Start Saving Now',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _savingsSlabs(double goldGrams) {
     // Slab thresholds: Bronze 0-1g, Silver 1-5g, Gold 5-10g
     final slabs = [
@@ -343,11 +436,213 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _badge(IconData icon, String label) => Column(
-        children: [
-          Icon(icon, color: kGold, size: 22),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: kTextSecondary, fontSize: 11)),
-        ],
+   Widget _badge(IconData icon, String label) => Column(
+         children: [
+           Icon(icon, color: kGold, size: 22),
+           const SizedBox(height: 4),
+           Text(label, style: const TextStyle(color: kTextSecondary, fontSize: 11)),
+         ],
+       );
+
+  Widget _infoSections() => StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('home_sections')
+            .where('active', isEqualTo: true)
+            .orderBy('order')
+            .snapshots(),
+        builder: (_, snap) {
+          if (!snap.hasData || snap.data!.docs.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          final sections = snap.data!.docs
+              .map((d) => d.data() as Map<String, dynamic>)
+              .toList();
+          return Column(
+            children: sections
+                .map((section) => _infoSectionCard(section))
+                .toList(),
+          );
+        },
       );
+
+  Widget _infoSectionCard(Map<String, dynamic> section) {
+    final title = section['title'] ?? '';
+    final subtitle = section['subtitle'] ?? '';
+    final content = section['content'] ?? '';
+    final comparison = section['comparison'] as Map<String, dynamic>?;
+    final color = _parseColor(section['color']);
+    final icon = section['icon'] ?? '';
+    final url = section['url'] as String?;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0.08), color.withValues(alpha: 0.03)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                    if (subtitle.isNotEmpty)
+                      Text(subtitle,
+                          style: const TextStyle(
+                              color: kTextMuted, fontSize: 12)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (content.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(content,
+                style: const TextStyle(
+                    color: kTextSecondary, fontSize: 13, height: 1.5)),
+          ],
+          if (comparison != null && comparison.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: kBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Quick comparison',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: kTextPrimary,
+                          fontSize: 13)),
+                  const SizedBox(height: 10),
+                  _comparisonRow(
+                      comparison['left_label'] ?? 'DigiGold',
+                      comparison['right_label'] ?? 'ZIP',
+                      comparison['left_desc'] ?? '',
+                      comparison['right_desc'] ?? '',
+                      color),
+                ],
+              ),
+            ),
+          ],
+            if (url != null && url.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final Uri uri = Uri.parse(url);
+                    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open URL')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('Know More'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: color,
+                    side: BorderSide(color: color.withValues(alpha: 0.6)),
+                  ),
+                ),
+              ),
+            ],
+        ],
+      ),
+    );
+  }
+
+  Widget _comparisonRow(String leftTitle, String rightTitle, String leftDesc,
+      String rightDesc, Color accent) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(leftTitle,
+                    style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(leftDesc,
+                    style: const TextStyle(
+                        color: kTextSecondary, fontSize: 11, height: 1.4)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: kMaroon.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(rightTitle,
+                    style: const TextStyle(
+                        color: kMaroon,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(rightDesc,
+                    style: const TextStyle(
+                        color: kTextSecondary, fontSize: 11, height: 1.4)),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _parseColor(dynamic value) {
+    if (value is int) return Color(value);
+    if (value is String) {
+      if (value.startsWith('0xFF')) {
+        return Color(int.parse(value.replaceFirst('0xFF', '0xFF')));
+      }
+    }
+    return kGold;
+  }
 }

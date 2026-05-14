@@ -29,8 +29,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    match /plans/{doc} {
-      allow read, write: if true;
-    }
-  }
+     match /plans/{doc} {
+       allow read, write: if true;
+     }
+
+     match /home_sections/{doc} {
+       allow read: if true;
+       allow write: if true;
+     }
+   }
 }

@@ -38,6 +38,7 @@ class _TradeScreenState extends State<TradeScreen> {
 
   Future<void> _loadPrices() async {
     await PriceService.fetchPrices();
+    if (!mounted) return;
     setState(() {
       _goldPrice = PriceService.goldPrice;
       _silverPrice = PriceService.silverPrice;

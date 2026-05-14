@@ -18,6 +18,7 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   int _selectedIndex = 0;
   bool _manageShowShop = false;
+  bool _manageShowContent = false;
   final _goldCtrl = TextEditingController();
   final _silverCtrl = TextEditingController();
   final _gold10_24Ctrl = TextEditingController();
@@ -31,7 +32,38 @@ class _AdminScreenState extends State<AdminScreen> {
   void initState() {
     super.initState();
     _loadPrices();
+    _seedHomeSections();
   }
+
+   Future<void> _seedHomeSections() async {
+     final snapshot = await FirebaseFirestore.instance
+         .collection('home_sections')
+         .limit(1)
+         .get();
+     if (snapshot.docs.isEmpty) {
+       await FirebaseFirestore.instance.collection('home_sections').add({
+         'title': 'ZIP by HDFC Bank',
+         'subtitle': 'Buy Now Pay Later Service',
+         'content':
+             'ZIP by HDFC Bank is a "Buy Now Pay Later" (BNPL) service.\n\n'
+             '• Get instant small credit without a credit card\n'
+             '• Use for shopping, recharges, bill payments\n'
+             '• Settle the bill by the due date\n\n'
+             '⚠️ Use responsibly: late payments incur interest/penalties, '
+             'overuse can lead to debt, and it affects your CIBIL score.',
+         'icon': '🏦',
+         'url': 'https://www.hdfcbank.com/personal/pay/cards/payzapp/zip?utm_source=chatgpt.com',
+         'order': 1,
+         'active': true,
+         'comparison': {
+           'left_label': 'DigiGold',
+           'left_desc': 'Saving / Investment\nGold save pannum\nFuture value\nSafer for saving',
+           'right_label': 'ZIP',
+           'right_desc': 'Credit / Loan Type\nBorrow money use pannum\nImmediate spending\nCareful-aa use panna vendum',
+         },
+       });
+     }
+   }
 
   @override
   void dispose() {
@@ -222,22 +254,27 @@ class _AdminScreenState extends State<AdminScreen> {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _manageShowShop = false),
+                onTap: () => setState(() {
+                  _manageShowShop = false;
+                  _manageShowContent = false;
+                }),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: !_manageShowShop ? kGold : Colors.transparent,
+                        color: !_manageShowShop && !_manageShowContent
+                            ? kGold
+                            : Colors.transparent,
                         width: 2,
                       ),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Prices',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: !_manageShowShop ? kGold : kTextSecondary,
+                      color: kGold,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -246,22 +283,54 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _manageShowShop = true),
+                onTap: () => setState(() {
+                  _manageShowShop = true;
+                  _manageShowContent = false;
+                }),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: _manageShowShop ? kGold : Colors.transparent,
+                        color: _manageShowShop && !_manageShowContent
+                            ? kGold
+                            : Colors.transparent,
                         width: 2,
                       ),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Shop',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _manageShowShop ? kGold : kTextSecondary,
+                      color: kTextSecondary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() {
+                  _manageShowShop = false;
+                  _manageShowContent = true;
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: _manageShowContent ? kGold : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  child: const Text(
+                    'Content',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: kTextSecondary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -271,7 +340,12 @@ class _AdminScreenState extends State<AdminScreen> {
           ],
         ),
       ),
-      Expanded(child: _manageShowShop ? _shopTab() : _pricesTab()),
+      Expanded(
+          child: _manageShowContent
+              ? _homeSectionsTab()
+              : _manageShowShop
+                  ? _shopTab()
+                  : _pricesTab()),
     ],
   );
 
@@ -1428,7 +1502,76 @@ class _AdminScreenState extends State<AdminScreen> {
         ],
       );
 
-  Widget _shopTab() => Column(
+   Widget _shopTab() => Column(
+     children: [
+       Padding(
+         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+         child: Row(
+           children: [
+             const Expanded(
+               child: Text(
+                 'Shop Products',
+                 style: TextStyle(
+                   color: kTextPrimary,
+                   fontSize: 16,
+                   fontWeight: FontWeight.w900,
+                 ),
+               ),
+             ),
+             ElevatedButton.icon(
+               onPressed: _addProductDialog,
+               icon: const Icon(Icons.add, size: 16),
+               label: const Text('Add Product'),
+               style: ElevatedButton.styleFrom(
+                 backgroundColor: kGold,
+                 shape: RoundedRectangleBorder(
+                   borderRadius: BorderRadius.circular(12),
+                 ),
+                 padding: const EdgeInsets.symmetric(
+                   horizontal: 14,
+                   vertical: 11,
+                 ),
+               ),
+             ),
+           ],
+         ),
+       ),
+       Expanded(
+         child: StreamBuilder<QuerySnapshot>(
+           stream: FirebaseFirestore.instance
+               .collection('shop_products')
+               .snapshots(),
+           builder: (_, snap) {
+             if (!snap.hasData) {
+               return const Center(
+                 child: CircularProgressIndicator(color: kGold),
+               );
+             }
+             final docs = snap.data!.docs;
+             if (docs.isEmpty) {
+               return const Center(
+                 child: Text(
+                   'No products yet',
+                   style: TextStyle(color: kTextMuted),
+                 ),
+               );
+             }
+             return ListView.separated(
+               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+               itemCount: docs.length,
+               separatorBuilder: (_, _) => const SizedBox(height: 10),
+               itemBuilder: (_, i) {
+                 final product = docs[i].data() as Map<String, dynamic>;
+                 return _productRow(docs[i].reference, product);
+               },
+             );
+           },
+         ),
+       ),
+     ],
+   );
+
+  Widget _homeSectionsTab() => Column(
     children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -1436,7 +1579,7 @@ class _AdminScreenState extends State<AdminScreen> {
           children: [
             const Expanded(
               child: Text(
-                'Shop Products',
+                'Home Page Sections',
                 style: TextStyle(
                   color: kTextPrimary,
                   fontSize: 16,
@@ -1445,9 +1588,9 @@ class _AdminScreenState extends State<AdminScreen> {
               ),
             ),
             ElevatedButton.icon(
-              onPressed: _addProductDialog,
+              onPressed: _addSectionDialog,
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Product'),
+              label: const Text('Add Section'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: kGold,
                 shape: RoundedRectangleBorder(
@@ -1465,7 +1608,8 @@ class _AdminScreenState extends State<AdminScreen> {
       Expanded(
         child: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
-              .collection('shop_products')
+              .collection('home_sections')
+              .orderBy('order')
               .snapshots(),
           builder: (_, snap) {
             if (!snap.hasData) {
@@ -1477,7 +1621,7 @@ class _AdminScreenState extends State<AdminScreen> {
             if (docs.isEmpty) {
               return const Center(
                 child: Text(
-                  'No products yet',
+                  'No sections yet',
                   style: TextStyle(color: kTextMuted),
                 ),
               );
@@ -1487,8 +1631,8 @@ class _AdminScreenState extends State<AdminScreen> {
               itemCount: docs.length,
               separatorBuilder: (_, _) => const SizedBox(height: 10),
               itemBuilder: (_, i) {
-                final product = docs[i].data() as Map<String, dynamic>;
-                return _productRow(docs[i].reference, product);
+                final section = docs[i].data() as Map<String, dynamic>;
+                return _sectionRow(docs[i].reference, section);
               },
             );
           },
@@ -1496,6 +1640,77 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
     ],
   );
+
+  Widget _sectionRow(DocumentReference ref, Map<String, dynamic> section) {
+    final active = section['active'] != false;
+    final title = section['title'] ?? 'Untitled';
+    final icon = section['icon'] ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: cardDecoration(radius: 14),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: kGoldPale,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(icon, style: const TextStyle(fontSize: 16)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: kTextPrimary,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    _pill(
+                      active ? 'Active' : 'Hidden',
+                      active ? const Color(0xFF138a43) : kTextMuted,
+                      active ? const Color(0xFFDDFBE9) : const Color(0xFFEFEFEF),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Order: ${section['order'] ?? 0}',
+                  style: const TextStyle(color: kTextMuted, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: active,
+            activeThumbColor: const Color(0xFF138a43),
+            onChanged: (value) => ref.update({'active': value}),
+          ),
+          _iconButton(
+            Icons.edit_outlined,
+            kGold,
+            () => _editSectionDialog(ref, section),
+          ),
+          const SizedBox(width: 6),
+          _iconButton(
+            Icons.delete_outline,
+            const Color(0xFFdc2626),
+            () => ref.delete(),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _productRow(DocumentReference ref, Map<String, dynamic> product) {
     final active = product['inStock'] != false;
@@ -1667,68 +1882,216 @@ class _AdminScreenState extends State<AdminScreen> {
     Map<String, dynamic> product,
   ) => _productDialog(ref: ref, product: product);
 
-  void _productDialog({DocumentReference? ref, Map<String, dynamic>? product}) {
-    final nameCtrl = TextEditingController(text: product?['name'] ?? '');
-    final priceCtrl = TextEditingController(
-      text: _fieldText(product?['priceInr']),
-    );
-    final weightCtrl = TextEditingController(
-      text: _fieldText(product?['weightGrams']),
-    );
-    final purityCtrl = TextEditingController(text: product?['purity'] ?? '');
-    int catIdx = 0;
-    final cats = ['gold_coin', 'gold_biscuit', 'silver_coin', 'silver_biscuit'];
-    final existingCat = product?['category'];
-    if (existingCat != null && cats.contains(existingCat)) {
-      catIdx = cats.indexOf(existingCat);
-    }
+   void _productDialog({DocumentReference? ref, Map<String, dynamic>? product}) {
+     final nameCtrl = TextEditingController(text: product?['name'] ?? '');
+     final priceCtrl = TextEditingController(
+       text: _fieldText(product?['priceInr']),
+     );
+     final weightCtrl = TextEditingController(
+       text: _fieldText(product?['weightGrams']),
+     );
+     final purityCtrl = TextEditingController(text: product?['purity'] ?? '');
+     int catIdx = 0;
+     final cats = ['gold_coin', 'gold_biscuit', 'silver_coin', 'silver_biscuit'];
+     final existingCat = product?['category'];
+     if (existingCat != null && cats.contains(existingCat)) {
+       catIdx = cats.indexOf(existingCat);
+     }
+
+     showDialog(
+       context: context,
+       builder: (_) => StatefulBuilder(
+         builder: (ctx, setDialogState) => AlertDialog(
+           title: Text(ref == null ? 'Add Product' : 'Edit Product'),
+           content: SingleChildScrollView(
+             child: Column(
+               mainAxisSize: MainAxisSize.min,
+               children: [
+                 DropdownButtonFormField<int>(
+                   initialValue: catIdx,
+                   items: cats
+                       .asMap()
+                       .entries
+                       .map(
+                         (entry) => DropdownMenuItem(
+                           value: entry.key,
+                           child: Text(_categoryLabel(entry.value)),
+                         ),
+                       )
+                       .toList(),
+                   onChanged: (value) =>
+                       setDialogState(() => catIdx = value ?? 0),
+                   decoration: const InputDecoration(labelText: 'Category'),
+                 ),
+                 const SizedBox(height: 10),
+                 TextField(
+                   controller: nameCtrl,
+                   decoration: const InputDecoration(labelText: 'Name'),
+                 ),
+                 const SizedBox(height: 10),
+                 TextField(
+                   controller: priceCtrl,
+                   decoration: const InputDecoration(labelText: 'Price'),
+                   keyboardType: TextInputType.number,
+                 ),
+                 const SizedBox(height: 10),
+                 TextField(
+                   controller: weightCtrl,
+                   decoration: const InputDecoration(labelText: 'Weight (g)'),
+                   keyboardType: TextInputType.number,
+                 ),
+                 const SizedBox(height: 10),
+                 TextField(
+                   controller: purityCtrl,
+                   decoration: const InputDecoration(labelText: 'Purity'),
+                 ),
+               ],
+             ),
+           ),
+           actions: [
+             TextButton(
+               onPressed: () => Navigator.pop(ctx),
+               child: const Text('Cancel'),
+             ),
+             ElevatedButton(
+               onPressed: () async {
+                 final data = {
+                   'name': nameCtrl.text.trim(),
+                   'category': cats[catIdx],
+                   'priceInr': double.tryParse(priceCtrl.text) ?? 0,
+                   'weightGrams': double.tryParse(weightCtrl.text) ?? 0,
+                   'purity': purityCtrl.text.trim(),
+                   'description': product?['description'] ?? '',
+                   'inStock': product?['inStock'] ?? true,
+                 };
+                 if (ref == null) {
+                   await FirebaseFirestore.instance
+                       .collection('shop_products')
+                       .add(data);
+                 } else {
+                   await ref.update(data);
+                 }
+                 if (!ctx.mounted) return;
+                 Navigator.pop(ctx);
+               },
+               child: Text(ref == null ? 'Add' : 'Save'),
+             ),
+           ],
+         ),
+       ),
+     );
+   }
+
+  void _addSectionDialog() => _sectionDialog();
+
+  void _editSectionDialog(DocumentReference ref, Map<String, dynamic> section) {
+    _sectionDialog(ref: ref, section: section);
+  }
+
+  void _sectionDialog({DocumentReference? ref, Map<String, dynamic>? section}) {
+    final titleCtrl = TextEditingController(text: section?['title'] ?? '');
+    final subtitleCtrl =
+        TextEditingController(text: section?['subtitle'] ?? '');
+    final contentCtrl = TextEditingController(text: section?['content'] ?? '');
+    final iconCtrl = TextEditingController(text: section?['icon'] ?? '🏪');
+    final orderCtrl = TextEditingController(
+        text: section != null ? '${section['order'] ?? 0}' : '0');
+    final urlCtrl = TextEditingController(text: section?['url'] ?? '');
+    bool active = section?['active'] ?? true;
+
+     final comp = section?['comparison'] as Map<String, dynamic>?;
+     final leftLabelCtrl = TextEditingController(
+         text: comp != null ? (comp['left_label']?.toString() ?? '') : '');
+     final leftDescCtrl = TextEditingController(
+         text: comp != null ? (comp['left_desc']?.toString() ?? '') : '');
+     final rightLabelCtrl = TextEditingController(
+         text: comp != null ? (comp['right_label']?.toString() ?? '') : '');
+     final rightDescCtrl = TextEditingController(
+         text: comp != null ? (comp['right_desc']?.toString() ?? '') : '');
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Text(ref == null ? 'Add Product' : 'Edit Product'),
+          title: Text(ref == null ? 'Add Section' : 'Edit Section'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<int>(
-                  initialValue: catIdx,
-                  items: cats
-                      .asMap()
-                      .entries
-                      .map(
-                        (entry) => DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(_categoryLabel(entry.value)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setDialogState(() => catIdx = value ?? 0),
-                  decoration: const InputDecoration(labelText: 'Category'),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Title'),
                 ),
                 const SizedBox(height: 10),
                 TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  controller: subtitleCtrl,
+                  decoration: const InputDecoration(labelText: 'Subtitle'),
                 ),
                 const SizedBox(height: 10),
                 TextField(
-                  controller: priceCtrl,
-                  decoration: const InputDecoration(labelText: 'Price'),
+                  controller: contentCtrl,
+                  decoration: const InputDecoration(labelText: 'Content'),
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 10),
+                 TextField(
+                   controller: iconCtrl,
+                   decoration: const InputDecoration(
+                       labelText: 'Icon (emoji)', hintText: '🏪'),
+                 ),
+                 const SizedBox(height: 10),
+                 TextField(
+                   controller: urlCtrl,
+                   decoration: const InputDecoration(
+                       labelText: 'URL (optional)', hintText: 'https://...'),
+                 ),
+                 const SizedBox(height: 10),
+                TextField(
+                  controller: orderCtrl,
+                  decoration:
+                      const InputDecoration(labelText: 'Display Order'),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Text('Active'),
+                    const SizedBox(width: 10),
+                    Switch(
+                      value: active,
+                      onChanged: (value) =>
+                          setDialogState(() => active = value),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                const Text('Comparison Table (optional)',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
                 TextField(
-                  controller: weightCtrl,
-                  decoration: const InputDecoration(labelText: 'Weight (g)'),
-                  keyboardType: TextInputType.number,
+                  controller: leftLabelCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Left Title', hintText: 'DigiGold'),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: leftDescCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Left Description'),
+                  maxLines: 2,
                 ),
                 const SizedBox(height: 10),
                 TextField(
-                  controller: purityCtrl,
-                  decoration: const InputDecoration(labelText: 'Purity'),
+                  controller: rightLabelCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Right Title', hintText: 'ZIP'),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: rightDescCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Right Description'),
+                  maxLines: 2,
                 ),
               ],
             ),
@@ -1738,20 +2101,31 @@ class _AdminScreenState extends State<AdminScreen> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final data = {
-                  'name': nameCtrl.text.trim(),
-                  'category': cats[catIdx],
-                  'priceInr': double.tryParse(priceCtrl.text) ?? 0,
-                  'weightGrams': double.tryParse(weightCtrl.text) ?? 0,
-                  'purity': purityCtrl.text.trim(),
-                  'description': product?['description'] ?? '',
-                  'inStock': product?['inStock'] ?? true,
-                };
+             ElevatedButton(
+               onPressed: () async {
+                 final comparison = <String, dynamic>{
+                   if (leftLabelCtrl.text.trim().isNotEmpty)
+                    'left_label': leftLabelCtrl.text.trim(),
+                   if (leftDescCtrl.text.trim().isNotEmpty)
+                    'left_desc': leftDescCtrl.text.trim(),
+                   if (rightLabelCtrl.text.trim().isNotEmpty)
+                    'right_label': rightLabelCtrl.text.trim(),
+                   if (rightDescCtrl.text.trim().isNotEmpty)
+                    'right_desc': rightDescCtrl.text.trim(),
+                 };
+                  final data = {
+                   'title': titleCtrl.text.trim(),
+                   'subtitle': subtitleCtrl.text.trim(),
+                   'content': contentCtrl.text.trim(),
+                   'icon': iconCtrl.text.trim(),
+                   'url': urlCtrl.text.trim(),
+                   'order': int.tryParse(orderCtrl.text) ?? 0,
+                   'active': active,
+                   'comparison': comparison.isNotEmpty ? comparison : null,
+                 };
                 if (ref == null) {
                   await FirebaseFirestore.instance
-                      .collection('shop_products')
+                      .collection('home_sections')
                       .add(data);
                 } else {
                   await ref.update(data);

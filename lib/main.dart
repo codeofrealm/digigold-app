@@ -16,6 +16,8 @@ import 'screens/plan_screen.dart';
 import 'screens/passbook_screen.dart';
 import 'screens/account_screen.dart';
 import 'screens/admin_screen.dart';
+import 'screens/sip_detail_screen.dart';
+import 'screens/auto_pay_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,6 +72,21 @@ final _router = GoRouter(
       },
     ),
     GoRoute(path: '/admin', builder: (_, __) => const AdminScreen()),
+    GoRoute(
+      path: '/sip_detail',
+      builder: (_, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return SipDetailScreen(data: extra['data'], sipId: extra['id']);
+      },
+    ),
+    GoRoute(
+      path: '/auto_pay',
+      builder: (_, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return AutoPayScreen(
+            sipData: extra['data'], sipId: extra['id']);
+      },
+    ),
     ShellRoute(
       builder: (_, state, child) {
         final loc = state.matchedLocation;
